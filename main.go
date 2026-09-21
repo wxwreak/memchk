@@ -56,14 +56,6 @@ var patterns = []SecretPattern{
 
 var allResults []ScanResult
 
-func getProcessName(pid string) string {
-	data, err := os.ReadFile(fmt.Sprintf("/proc/%s/comm", pid))
-	if err != nil {
-		return "unknown"
-	}
-	return strings.TrimSpace(string(data))
-}
-
 func findPIDByName(name string) ([]string, error) {
 	var pids []string
 	matches, err := filepath.Glob("/proc/[0-9]*/comm")
