@@ -1,10 +1,10 @@
-# MemChecker (memchk) 🕵️‍♂️
+# MemChecker [memchk]
 
 A lightweight, blazingly fast post-exploitation and security auditing utility written in Go. It is designed to hunt for secrets, API keys, tokens, and credentials directly inside the live memory (`/proc/[PID]/mem`) of running Linux processes.
 
 Unlike traditional disk-based credential scanners, **memchk** dumps and analyzes active process RAM regions in real-time, helping red teamers, penetration testers, and security auditors discover credentials that applications leave sitting in cleartext on the heap.
 
-## ✨ Features
+## Features
 
 - **Process Name Targeting (`-t`):** Automatically resolves process names (e.g., `firefox`, `python`, `node`) to their respective PIDs.
 - **System-Wide Scan (`-a`):** Iterates through the entire `/proc` filesystem to scan the memory of **all** running processes in the system at once.
@@ -22,13 +22,13 @@ Unlike traditional disk-based credential scanners, **memchk** dumps and analyzes
 
 ---
 
-## 📸 Preview
+## Preview
 
 > ![mmechk](https://github.com/wxwreak/memchk/blob/main/memchk.png)
 
 ---
 
-## 🛠️ Installation
+## Installation
 
 You can compile and install **memchk** easily using the provided `Makefile`.
 
@@ -52,7 +52,7 @@ make install-local
 ```
 This moves the binary to `~/.local/bin/memchk` (make sure this directory is in your `$PATH`).
 
-## 🚀 Usage
+## Usage
 
 > [!IMPORTANT]
 > Because the tool interacts directly with the kernel's `/proc` filesystem to inspect memory of other processes, it must be executed with root privileges (`sudo`).
@@ -72,17 +72,17 @@ sudo memchk -p 45445
 sudo memchk -a -o report.json
 ```
 
-## 🛡️ Defensive Note & Remediation
+## Defensive Note & Remediation
 
 Developers can mitigate memory-dumping risks by implementing the following best practices:
 1. **Memory Zeroing:** Explicitly overwrite sensitive variables, byte slices, and buffers in memory with zeroes (`0x00`) immediately after use.
 2. **Restrict `PTRACE` Capabilities:** Ensure the host Linux system restricts the `CAP_SYS_PTRACE` capability, preventing non-root users (or even compromised root processes, depending on LSM settings like Yama) from attaching to or reading other processes.
 3. **Avoid Plaintext Buffers:** Utilize memory-hardening techniques or ephemeral secure enclaves to process secrets, preventing keys from lingering on the heap indefinitely.
 
-## 📄 License
+## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE)
 
-## 📝 Disclaimer
+## Disclaimer
 
 This tool is created **strictly for educational purposes, security research, and authorized penetration testing**. 
 
