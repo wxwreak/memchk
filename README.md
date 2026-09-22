@@ -1,6 +1,6 @@
 # MemChecker [memchk]
 
-A lightweight, blazingly fast post-exploitation and security auditing utility written in Go. It is designed to hunt for secrets, API keys, tokens, and credentials directly inside the live memory (`/proc/[PID]/mem`) of running Linux processes.
+A lightweight, blazingly fast post-exploitation and security auditing utility written in Go. It is designed to hunt for **secrets**, **API keys**, **tokens**, **crypto private keys**, and credentials directly inside the live memory (`/proc/[PID]/mem`) of running Linux processes.
 
 Unlike traditional disk-based credential scanners, **memchk** dumps and analyzes active process RAM regions in real-time, helping red teamers, penetration testers, and security auditors discover credentials that applications leave sitting in cleartext on the heap.
 
@@ -17,6 +17,7 @@ Unlike traditional disk-based credential scanners, **memchk** dumps and analyzes
   - Slack & Discord Bot Tokens
   - Stripe & Twilio API Credentials
   - Database Connection Strings (Postgres, MySQL, MongoDB, etc.)
+  - Crypto (Ethereium, BIP-39, Bitcoin)
 - **JSON Export (`-o`):** Saves structured findings directly to a JSON file for easy processing with tools like `jq` or integration into reporting pipelines.
 - **Zero Dependencies:** Compiles into a single static binary with no external library requirements.
 
@@ -24,7 +25,7 @@ Unlike traditional disk-based credential scanners, **memchk** dumps and analyzes
 
 ## Preview
 
-> ![mmechk](https://github.com/wxwreak/memchk/blob/main/memchk.png)
+> ![memchk](https://github.com/wxwreak/memchk/blob/main/memchk.png)
 
 ---
 
@@ -57,6 +58,39 @@ This moves the binary to `~/.local/bin/memchk` (make sure this directory is in y
 > [!IMPORTANT]
 > Because the tool interacts directly with the kernel's `/proc` filesystem to inspect memory of other processes, it must be executed with root privileges (`sudo`).
 
+### Command Line Interface
+
+```bash
+sudo memchk [-t <process_name> | -p <pid> | -a] [-o <filename.json>]
+```
+
+| Flag | Parameter | Description | Example |
+| :--- | :--- | :--- | :--- |
+| `-t` | `<process_name>` | Target a specific process by its executable name. | `sudo memchk -t python` |
+| `-p` | `<pid>` | Target a specific process by its Process ID (PID). | `sudo memchk -p 45445` |
+| `-a` | *None* | System-wide scan. Iterates through all running processes. | `sudo memchk -a` |
+| `-o` | `<filename.json>`| Export the structured findings into a JSON file. | `sudo memchk -a -o report.json` |
+
+---
+
+### Examples
+
+**Scan a specific process by name:**
+```bash
+sudo memchk -t python
+```
+
+**Scan a specific PID:**
+```bash
+sudo memchk -p 45445
+```
+
+**Scan ALL active system processes & export to JSON:**
+```bash
+sudo memchk -a -o report.json
+```
+
+
 ### Scan a Specific Process Name
 ```bash
 sudo memchk -t python
@@ -80,7 +114,7 @@ Developers can mitigate memory-dumping risks by implementing the following best 
 3. **Avoid Plaintext Buffers:** Utilize memory-hardening techniques or ephemeral secure enclaves to process secrets, preventing keys from lingering on the heap indefinitely.
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE).
 
 ## Disclaimer
 
