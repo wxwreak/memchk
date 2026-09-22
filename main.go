@@ -35,6 +35,7 @@ type ScanResult struct {
 }
 
 var patterns = []SecretPattern{
+	// Secrets & API Keys
 	{Name: "Google API Key", Regex: regexp.MustCompile(`AIza[0-9A-Za-z-_]{35}`)},
 	{Name: "Slack Token", Regex: regexp.MustCompile(`xox[bapr]-[0-9A-Za-z-]{10,48}`)},
 	{Name: "Generic Bearer Token", Regex: regexp.MustCompile(`(?i)bearer\s+[A-Za-z0-9\-\._~\+\/]+=*`)},
@@ -52,9 +53,49 @@ var patterns = []SecretPattern{
 	{Name: "Facebook Access Token", Regex: regexp.MustCompile(`(?i)EAACEdEose0cBA[0-9A-Za-z]+`)},
 	{Name: "PuTTY Private Key", Regex: regexp.MustCompile(`PuTTY-User-Key-File-2`)},
 	{Name: "Database Connection String", Regex: regexp.MustCompile(`(?i)(mongodb|postgres|mysql|sqlite):\/\/[a-zA-Z0-9_]+:[^@\s]+@[a-zA-Z0-9.-]+:[0-9]+`)},
+	// Crypto Secrets & Credentials
+	{Name: "Ethereum / EVM Address", Regex: regexp.MustCompile(`\b0x[a-fA-F0-9]{40}\b`)},
+	{Name: "Ethereum / EVM Private Key", Regex: regexp.MustCompile(`\b(0x)?[a-fA-F0-9]{64}\b`)},
+	{Name: "BIP-39 Seed Phrase (12 words)", Regex: regexp.MustCompile(`\b([a-z]{3,8}\s){11}[a-z]{3,8}\b`)},
+	{Name: "Bitcoin Modern Address (SegWit)", Regex: regexp.MustCompile(`\bbc1[a-zA-HJ-NP-Z0-9]{25,39}\b`)},
+	{Name: "Solana Address", Regex: regexp.MustCompile(`\b[1-9A-HJ-NP-Za-km-z]{32,44}\b`)},
+	{Name: "Bitcoin WIF Private Key", Regex: regexp.MustCompile(`\b[5KL][1-9A-HJ-NP-Za-km-z]{50,51}\b`)},
+	{Name: "Bitcoin Legacy Address", Regex: regexp.MustCompile(`\b[1-9A-HJ-NP-Za-km-z]{26,33}\b`)},
 }
 
 var allResults []ScanResult
+
+func isCrypto(patterName string, match []byte, fullBuffer []byte, matchIdx []int) bool {
+	matchStr := string(match)
+	switch patterName {
+	case "Ethereium / EVM Private Key":
+		start := matchIdx[0] - 20
+		if start < 0 {
+			start = 0
+		}
+		end := matchIdx[1] + 20
+		if end > len(fullBuffer) {
+			end = len(fullBuffer)
+		}
+		context := strings.ToLower(string(fullBuffer[start:end]))
+		keywords := []string{"key", "priv", "secret", "wallet", "eth", "sign"}
+		for _, kw := range keywords {
+			if strings.Contains(context, kw) {
+				return true
+			}
+		}
+		return false
+
+	case "BIP-39 Seed Phrase (12 words)":
+		for _, r := range matchStr {
+			if (r < 'a' || r > 'z') && r != ' ' {
+				return false
+			}
+		}
+		return true
+	}
+	return true
+}
 
 func findPIDByName(name string) ([]string, error) {
 	var pids []string
@@ -142,14 +183,29 @@ func parseMemoryMaps(pid string) ([]MemoryRegion, error) {
 	return regions, nil
 }
 
-func scanBuffer(buffer []byte, regionName string, startAddr int64) {
+func scanBuffer(buffer []byte, regionName string, startAddr int64, pid string, procName string) {
 	for _, pattern := range patterns {
-		matches := pattern.Regex.FindAll(buffer, -1)
-		for _, match := range matches {
-			cleanMatch := bytes.TrimSpace(match)
+		locs := pattern.Regex.FindAllIndex(buffer, -1)
+		for _, loc := range locs {
+			matchBytes := buffer[loc[0]:loc[1]]
+			cleanMatch := bytes.TrimSpace(matchBytes)
 			if len(cleanMatch) > 0 {
-				fmt.Printf("[!] Alert: Found %s in region %s (Offset: 0x%x)\n", pattern.Name, regionName, startAddr)
-				fmt.Printf("    -> Match: %s\n\n", string(cleanMatch))
+				if !isCrypto(pattern.Name, cleanMatch, buffer, loc) {
+					continue
+				}
+				matchStr := string(cleanMatch)
+				offsetHex := fmt.Sprintf("0x%x", startAddr+int64(loc[0]))
+				fmt.Printf("[!] Alert: Found %s in region %s (Offset: %s)\n", pattern.Name, regionName, offsetHex)
+				fmt.Printf("    -> Match: %s\n\n", matchStr)
+
+				allResults = append(allResults, ScanResult{
+					PID:         pid,
+					ProcessName: procName,
+					Type:        pattern.Name,
+					Region:      regionName,
+					Offset:      offsetHex,
+					Match:       matchStr,
+				})
 			}
 		}
 	}
@@ -209,7 +265,7 @@ func main() {
 				continue
 			}
 			if len(buffer) > 0 {
-				scanBuffer(buffer, region.Name, region.StartAddr)
+				scanBuffer(buffer, region.Name, region.StartAddr, pid, *targetFlag)
 			}
 		}
 		memFile.Close()
