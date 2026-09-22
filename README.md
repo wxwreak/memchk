@@ -73,39 +73,6 @@ sudo memchk [-t <process_name> | -p <pid> | -a] [-o <filename.json>]
 
 ---
 
-### Examples
-
-**Scan a specific process by name:**
-```bash
-sudo memchk -t python
-```
-
-**Scan a specific PID:**
-```bash
-sudo memchk -p 45445
-```
-
-**Scan ALL active system processes & export to JSON:**
-```bash
-sudo memchk -a -o report.json
-```
-
-
-### Scan a Specific Process Name
-```bash
-sudo memchk -t python
-```
-
-### Scan a Specific PID
-```bash
-sudo memchk -p 45445
-```
-
-### Scan ALL Active System Processes & Export to JSON
-```bash
-sudo memchk -a -o report.json
-```
-
 ## Defensive Note & Remediation
 
 Developers can mitigate memory-dumping risks by implementing the following best practices:
